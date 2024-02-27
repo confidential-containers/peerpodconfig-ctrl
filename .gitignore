@@ -1,40 +1,11 @@
 #Directories
-install/runtime-payload/bin
-pause_bundle
-output
-staticlib
-pause
-umoci
-skopeo
-volumes/csi-wrapper/build
-volumes/csi-wrapper/vendor
-opa/
+bin
 
 # Binaries
-agent-protocol-forwarder
-api-server-rest
-attestation-agent
-caa-provisioner-cli
-cloud-api-adaptor
-cluster-provisioner
-confidential-data-hub
-kata-agent
-process-user-data
-opa
-
-# The code files under cmd are not ignored
-!/cmd/*
-
-# Ignore the contents of the certificates directory
-podvm/files/etc/certificates/*
+manager
 
 # IDEs
 .vscode
 
 # Files
-vcenter.auto.pkrvars.hcl
-settings.auto.pkrvars.hcl
-*.qcow2
-.git-commit
-.git-commit.tmp
 *.tar.gz
