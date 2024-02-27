@@ -1,3 +1,0 @@
-FROM --platform="${TARGETPLATFORM}" alpine:latest
-ENV ISPRODUCTION=false
-ENTRYPOINT [ "/bin/sh", "-c", "env" ]

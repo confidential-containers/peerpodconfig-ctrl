@@ -1,42 +1,27 @@
-ARG BUILD_TYPE=dev
-ARG BUILDER_BASE=quay.io/confidential-containers/golang-fedora:1.20.12-38
-ARG BASE=registry.fedoraproject.org/fedora:38
+# Build the manager binary
+FROM golang:1.20 as builder
 
-# This dockerfile uses Go cross-compilation to build the binary,
-# we build on the host platform ($BUILDPLATFORM) and then copy the
-# binary into the container image of the target platform ($TARGETPLATFORM)
-# that was specified with --platform. For more details see:
-# https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
-FROM --platform=$BUILDPLATFORM $BUILDER_BASE as builder-release
-# For `dev` builds due to CGO constraints we have to emulate the target platform
-# instead of using Go's cross-compilation
-FROM --platform=$TARGETPLATFORM $BUILDER_BASE as builder-dev
-
-RUN dnf install -y libvirt-devel && dnf clean all
-
-FROM builder-${BUILD_TYPE} AS builder
-ARG RELEASE_BUILD
-ARG COMMIT
-ARG VERSION
-ARG TARGETARCH
-ARG YQ_VERSION
-
-RUN go install github.com/mikefarah/yq/v4@$YQ_VERSION
-
-WORKDIR /work
-COPY go.mod go.sum ./
+WORKDIR /workspace
+# Copy the Go Modules manifests
+COPY go.mod go.mod
+COPY go.sum go.sum
+# cache deps before building and copying source so that we don't need to re-download as much
+# and so that source changes don't invalidate our downloaded layer
 RUN go mod download
-COPY entrypoint.sh Makefile Makefile.defaults versions.yaml ./
-COPY cmd   ./cmd
-COPY pkg   ./pkg
-COPY proto ./proto
-RUN CC=gcc make ARCH=$TARGETARCH COMMIT=$COMMIT VERSION=$VERSION RELEASE_BUILD=$RELEASE_BUILD cloud-api-adaptor
 
-FROM --platform=$TARGETPLATFORM $BASE as base-release
+# Copy the go source
+COPY main.go main.go
+COPY api/ api/
+COPY controllers/ controllers/
 
-FROM base-release as base-dev
-RUN dnf install -y libvirt-libs /usr/bin/ssh && dnf clean all
+# Build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
 
-FROM base-${BUILD_TYPE}
-COPY --from=builder /work/cloud-api-adaptor /work/entrypoint.sh /usr/local/bin/
-CMD ["entrypoint.sh"]
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+FROM gcr.io/distroless/static:nonroot
+WORKDIR /
+COPY --from=builder /workspace/manager .
+USER 65532:65532
+
+ENTRYPOINT ["/manager"]

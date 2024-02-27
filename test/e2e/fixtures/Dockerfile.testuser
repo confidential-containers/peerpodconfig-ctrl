@@ -1,5 +1,0 @@
-FROM --platform="${TARGETPLATFORM}" alpine:latest
-RUN addgroup -g 1000 otheruser && \
-    adduser -G otheruser -u 1000 -s /bin/bash -D otheruser
-USER otheruser
-ENTRYPOINT [ "/bin/sh", "-c", "whoami" ]
